@@ -31,14 +31,11 @@ realtime_stock_pipeline/
 ├── db/schema.sql               # DB tables and indexes
 ├── docker-compose.yml          # Kafka, Zookeeper, PostgreSQL
 ├── requirements.txt            # Python dependencies
-└── docs/Data Engineering for Real-Time Stock Market Analysis.pdf
 ```
 
 ---
 
-
 # ⚙️ Quick Start
-
 
 ### 1. Start Docker Services
 
@@ -113,6 +110,6 @@ Password: postgres
 
 # 📝 Notes
 
-
 * Alpha Vantage has rate limits; streaming frequency should be controlled.
 * For production: add retries, monitoring, and Kafka partitions.
+
