@@ -1,0 +1,191 @@
+version: "3.8"
+
+services:
+  # --- KAFKA IN KRAFT MODE (NO ZOOKEEPER) ---
+  kafka:
+    image: confluentinc/cp-kafka:7.4.10
+    container_name: kafka
+    hostname: kafka
+    ports:
+      - "9092:9092" # internal listener container -> container
+      - "9094:9094" # external mapped host port
+      - "9093:9093" # controller
+    environment:
+      KAFKA_KRAFT_MODE: "true"
+      KAFKA_PROCESS_ROLES: "controller,broker"
+      KAFKA_NODE_ID: 1
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:9093"
+      KAFKA_LISTENERS: >
+        PLAINTEXT_INTERNAL://kafka:9092,
+        PLAINTEXT_EXTERNAL://0.0.0.0:9094,
+        CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: >
+        PLAINTEXT_INTERNAL://kafka:9092,
+        PLAINTEXT_EXTERNAL://localhost:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: >
+        PLAINTEXT_INTERNAL:PLAINTEXT,
+        PLAINTEXT_EXTERNAL:PLAINTEXT,
+        CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    networks:
+      - stock_data
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo > /dev/tcp/localhost/9092 || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  # --- KAFKA TOPIC INITIALIZER ---
+  kafka-init:
+    image: confluentinc/cp-kafka:7.4.10
+    depends_on:
+      - kafka
+    networks:
+      - stock_data
+    entrypoint: ["/bin/bash", "/app/docker/kafka-topics-init.sh"]
+    volumes:
+      - ./docker/kafka-topics-init.sh:/app/docker/kafka-topics-init.sh:ro
+    restart: "no"
+
+  # --- KAFKA UI ---
+  kafka-ui:
+    container_name: kafka-ui
+    image: provectuslabs/kafka-ui:v0.7.2
+    ports:
+      - "8085:8080"
+    depends_on:
+      - kafka
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      # inside docker network use kafka:9092; from host use localhost:9094
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    networks:
+      - stock_data
+    restart: unless-stopped
+
+  # --- POSTGRES ---
+  postgres:
+    image: postgres:15
+    container_name: postgres_db
+    environment:
+      POSTGRES_DB: marketdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./sql:/docker-entrypoint-initdb.d:ro
+    networks:
+      - stock_data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # --- PRODUCER ---
+  producer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: python
+    command: ["python", "producer/producer.py"]
+    env_file: .env
+    depends_on:
+      - kafka
+    volumes:
+      - .:/app
+    networks:
+      - stock_data
+    restart: unless-stopped
+
+  # --- FASTAPI API ---
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: python
+    command:
+      [
+        "uvicorn",
+        "api.market_insights_api.app:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000",
+        "--log-level",
+        "info",
+      ]
+    env_file: .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - kafka
+    volumes:
+      - .:/app
+      - ./static:/app/static
+    networks:
+      - stock_data
+    restart: unless-stopped
+
+  # --- PROMETHEUS ---
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    networks:
+      - stock_data
+    restart: unless-stopped
+
+  # --- GRAFANA ---
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    ports:
+      - "3000:3000"
+    networks:
+      - stock_data
+    restart: unless-stopped
+
+  # --- SPARK JOB (Local Mode) ---
+  spark-job:
+    image: bitnami/spark:latest
+    container_name: spark-job
+    command:
+      [
+        "bash",
+        "-c",
+        "sleep 10 && spark-submit --master local[*] /app/spark/market_stream.py",
+      ]
+    env_file: .env
+    volumes:
+      - .:/app
+      - ./spark/jars:/opt/bitnami/spark/jars # JDBC driver placed here
+      - ./spark/checkpoints:/tmp/checkpoints # persist Spark checkpointing
+    networks:
+      - stock_data
+    depends_on:
+      - kafka
+      - postgres
+    restart: on-failure
+
+networks:
+  stock_data:
+
+volumes:
+  pgdata:
+  kafka-data:

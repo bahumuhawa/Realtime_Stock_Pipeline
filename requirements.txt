@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+kafka-python
+requests
+pyspark==3.4.1
+psycopg2-binary
+python-dotenv
+backoff
+prometheus-client
+prometheus-fastapi-instrumentator
+reportlab

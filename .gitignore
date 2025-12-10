@@ -1,0 +1,139 @@
+# -------------------------
+# PYTHON
+# -------------------------
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pdb
+*.egg-info/
+.eggs/
+*.sqlite3
+
+# Virtual environments
+venv/
+.venv/
+
+# -------------------------
+# ENVIRONMENT VARIABLES
+# -------------------------
+.env
+*.env
+.env.*
+!.env.example
+
+# -------------------------
+# PACKAGING
+# -------------------------
+build/
+dist/
+pip-wheel-metadata/
+*.whl
+MANIFEST
+
+# -------------------------
+# FASTAPI / UVICORN
+# -------------------------
+*.pid
+uvicorn.log
+__temp__
+.cache/
+
+# -------------------------
+# JUPYTER
+# -------------------------
+.ipynb_checkpoints/
+
+# -------------------------
+# SPARK
+# -------------------------
+*.crc
+spark-warehouse/
+derby.log
+
+# Spark checkpoints
+checkpoints/
+spark/checkpoints/
+spark-local/
+spark-temp/
+tmp/
+tmp*/
+*/_spark_metadata/
+*/_temporary/
+*/_temporary/*
+*/_logs/
+
+# -------------------------
+# LOGS
+# -------------------------
+*.log
+*.out
+*.err
+logs/
+log/
+
+# -------------------------
+# KAFKA
+# -------------------------
+kafka-logs/
+kafka-data/
+zookeeper-data/
+zookeeper-log/
+kafka-ui-cache/
+
+# -------------------------
+# DOCKER
+# -------------------------
+volumes/
+pgdata/
+data/
+docker-compose.override.yml
+*.tar
+*.img
+
+# -------------------------
+# DATABASE
+# -------------------------
+*.db
+*.sql-journal
+*.dump
+*.backup
+*.sql.gz
+
+# -------------------------
+# VS CODE
+# -------------------------
+.vscode/
+.history/
+
+# -------------------------
+# NODE / FRONTEND (optional)
+# -------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# -------------------------
+# MACOS
+# -------------------------
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+
+# -------------------------
+# POWER BI EXPORTS
+# -------------------------
+*.pbix
+*.pbit
+
+# -------------------------
+# ARCHIVES & OTHER
+# -------------------------
+*.zip
+*.tar.gz
+*.tmp
+*.swp
+*.bak
